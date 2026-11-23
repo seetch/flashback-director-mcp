@@ -110,13 +110,19 @@ public final class FlashbackVersionBridge262 implements FlashbackVersionBridge {
     }
 
     @Override
+    public boolean isFullscreen() {
+        Minecraft mc = Minecraft.getInstance();
+        return mc.getWindow() != null && mc.getWindow().isFullscreen();
+    }
+
+    @Override
     public Map<String, Object> buildStatus() {
         Minecraft mc = Minecraft.getInstance();
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("mod_version", modVersion());
         result.put("minecraft_version", minecraftVersion());
         result.put("flashback_version", flashbackVersion());
-        result.put("fullscreen", mc.getWindow() != null && mc.getWindow().isFullscreen());
+        result.put("fullscreen", isFullscreen());
 
         String state;
         if (Flashback.isExporting()) {

@@ -1,4 +1,4 @@
-﻿package dev.seetch.flashbackdirector.mc263;
+package dev.seetch.flashbackdirector.mc263;
 
 import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.combo_options.AudioCodec;
@@ -110,13 +110,19 @@ public final class FlashbackVersionBridge263 implements FlashbackVersionBridge {
     }
 
     @Override
+    public boolean isFullscreen() {
+        Minecraft mc = Minecraft.getInstance();
+        return mc.getWindow() != null && mc.getWindow().isExclusiveFullscreen();
+    }
+
+    @Override
     public Map<String, Object> buildStatus() {
         Minecraft mc = Minecraft.getInstance();
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("mod_version", modVersion());
         result.put("minecraft_version", minecraftVersion());
         result.put("flashback_version", flashbackVersion());
-        result.put("fullscreen", mc.getWindow() != null && mc.getWindow().isFullscreen());
+        result.put("fullscreen", isFullscreen());
 
         String state;
         if (Flashback.isExporting()) {

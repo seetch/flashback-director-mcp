@@ -31,13 +31,19 @@ public final class SafeScreenshotCapturer {
     private SafeScreenshotCapturer() {
     }
 
-    public static Map<String, Object> capture(int requestedWidth, int requestedHeight, String outputPath, Boolean noGui) {
+    public static Map<String, Object> capture(
+        FlashbackVersionBridge fb,
+        int requestedWidth,
+        int requestedHeight,
+        String outputPath,
+        Boolean noGui
+    ) {
         Minecraft mc = Minecraft.getInstance();
         int targetW = Math.max(160, Math.min(requestedWidth, 3840));
         int targetH = Math.max(90, Math.min(requestedHeight, 2160));
 
         // Guard against fullscreen before attempting capture (Review Focus #1).
-        boolean fullscreen = ClientThreadExecutor.runSync(() -> mc.getWindow().isFullscreen(), 5_000L, "fullscreen check");
+        boolean fullscreen = ClientThreadExecutor.runSync(fb::isFullscreen, 5_000L, "fullscreen check");
         if (fullscreen) {
             throw ToolError.fullscreenUnsupported();
         }

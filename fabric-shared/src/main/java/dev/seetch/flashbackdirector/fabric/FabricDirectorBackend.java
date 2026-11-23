@@ -217,7 +217,7 @@ public final class FabricDirectorBackend implements DirectorBackend {
             }, ClientThreadExecutor.DEFAULT_TIMEOUT_MS, "hide hud for screenshot");
         }
         try {
-            return SafeScreenshotCapturer.capture(width, height, outputPath, noGui);
+            return SafeScreenshotCapturer.capture(fb, width, height, outputPath, noGui);
         } finally {
             if (prevHud != null && !prevHud.isEmpty()) {
                 final Map<String, Object> toRestore = prevHud;
@@ -355,7 +355,7 @@ public final class FabricDirectorBackend implements DirectorBackend {
     public Map<String, Object> exportVideo(Map<String, Object> options) {
         return ClientThreadExecutor.runSync(() -> {
             requireReplay();
-            if (Minecraft.getInstance().getWindow().isFullscreen()) {
+            if (fb.isFullscreen()) {
                 throw ToolError.fullscreenUnsupported();
             }
             return fb.exportVideo(options);

@@ -21,6 +21,8 @@ public interface FlashbackVersionBridge {
 
     boolean isExporting();
 
+    boolean isFullscreen();
+
     Map<String, Object> buildStatus();
 
     Map<String, Object> listReplays();

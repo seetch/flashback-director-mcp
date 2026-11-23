@@ -4,6 +4,7 @@ build/
 out/
 **/build/
 **/out/
+release/
 
 # IDE
 .idea/
