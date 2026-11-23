@@ -27,7 +27,7 @@ run/
 Thumbs.db
 bridge.json
 
-# Local agent files
+# Local agent & planning files
 AGENTS.md
 CLAUDE.md
 AGENT.md
@@ -36,3 +36,4 @@ GEMINI.md
 .claude/
 .agents/
 .superpowers/
+docs/superpowers/
