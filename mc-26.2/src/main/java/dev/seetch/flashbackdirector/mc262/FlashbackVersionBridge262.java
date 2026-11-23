@@ -1,8 +1,13 @@
 package dev.seetch.flashbackdirector.mc262;
 
+import com.mojang.authlib.GameProfile;
+import com.moulberry.flashback.FilePlayerSkin;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.combo_options.AspectRatio;
 import com.moulberry.flashback.combo_options.AudioCodec;
 import com.moulberry.flashback.combo_options.ExportProjection;
+import com.moulberry.flashback.combo_options.GlowingOverride;
+import com.moulberry.flashback.combo_options.Sizing;
 import com.moulberry.flashback.combo_options.TrackingBodyPart;
 import com.moulberry.flashback.combo_options.VideoCodec;
 import com.moulberry.flashback.combo_options.VideoContainer;
@@ -14,6 +19,8 @@ import com.moulberry.flashback.exporting.ExportSettings;
 import com.moulberry.flashback.keyframe.Keyframe;
 import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.handler.MinecraftKeyframeHandler;
+import com.moulberry.flashback.keyframe.impl.AudioKeyframe;
+import com.moulberry.flashback.keyframe.impl.BlockOverrideKeyframe;
 import com.moulberry.flashback.keyframe.impl.CameraKeyframe;
 import com.moulberry.flashback.keyframe.impl.CameraOrbitKeyframe;
 import com.moulberry.flashback.keyframe.impl.CameraShakeKeyframe;
@@ -24,6 +31,8 @@ import com.moulberry.flashback.keyframe.impl.TimelapseKeyframe;
 import com.moulberry.flashback.keyframe.impl.TimeOfDayKeyframe;
 import com.moulberry.flashback.keyframe.impl.TrackEntityKeyframe;
 import com.moulberry.flashback.keyframe.interpolation.InterpolationType;
+import com.moulberry.flashback.keyframe.types.AudioKeyframeType;
+import com.moulberry.flashback.keyframe.types.BlockOverrideKeyframeType;
 import com.moulberry.flashback.keyframe.types.CameraKeyframeType;
 import com.moulberry.flashback.keyframe.types.CameraOrbitKeyframeType;
 import com.moulberry.flashback.keyframe.types.CameraShakeKeyframeType;
@@ -52,7 +61,13 @@ import dev.seetch.flashbackdirector.mc262.mixin.TickrateKeyframeAccessor;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.player.PlayerModelPart;
+import net.minecraft.world.level.block.Block;
 import org.joml.Vector3d;
 
 import java.io.IOException;
@@ -62,10 +77,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
@@ -660,13 +679,22 @@ public final class FlashbackVersionBridge262 implements FlashbackVersionBridge {
         m.put("renderPlayers", v.renderPlayers);
         m.put("renderParticles", v.renderParticles);
         m.put("renderSky", v.renderSky);
+        m.put("skyColour", colorArrayToList(v.skyColour));
         m.put("renderNametags", v.renderNametags);
         m.put("renderBeaconBeams", v.renderBeaconBeams);
         m.put("overrideFog", v.overrideFog);
         m.put("overrideFogStart", v.overrideFogStart);
         m.put("overrideFogEnd", v.overrideFogEnd);
+        m.put("overrideFogColour", v.overrideFogColour);
+        m.put("fogColour", colorArrayToList(v.fogColour));
         m.put("overrideFov", v.overrideFov);
         m.put("overrideFovAmount", v.overrideFovAmount);
+        m.put("overrideCameraShake", v.overrideCameraShake);
+        m.put("cameraShakeSplitParams", v.cameraShakeSplitParams);
+        m.put("cameraShakeXFrequency", v.cameraShakeXFrequency);
+        m.put("cameraShakeXAmplitude", v.cameraShakeXAmplitude);
+        m.put("cameraShakeYFrequency", v.cameraShakeYFrequency);
+        m.put("cameraShakeYAmplitude", v.cameraShakeYAmplitude);
         m.put("overrideRoll", v.overrideRoll);
         m.put("overrideRollAmount", v.overrideRollAmount);
         m.put("overrideWeatherMode", v.overrideWeatherMode == null ? "NONE" : v.overrideWeatherMode.name());
@@ -675,10 +703,21 @@ public final class FlashbackVersionBridge262 implements FlashbackVersionBridge {
         m.put("ruleOfThirdsGuide", v.ruleOfThirdsGuide);
         m.put("centerGuide", v.centerGuide);
         m.put("cameraPath", v.cameraPath);
-        List<String> hiddenTags = state.hideNametags == null
-            ? List.of()
-            : state.hideNametags.stream().map(UUID::toString).toList();
-        m.put("hideNametags", hiddenTags);
+        m.put("sizing", v.sizing == null ? "KEEP_ASPECT_RATIO" : v.sizing.name());
+        m.put("changeAspectRatio", v.changeAspectRatio == null ? "ASPECT_16_9" : v.changeAspectRatio.name());
+        m.put("disableServerResourcePack", v.disableServerResourcePack);
+        m.put("hideAllSpectators", state.hideAllSpectators);
+        m.put("filteredEntities", state.filteredEntities == null ? List.of() : new ArrayList<>(state.filteredEntities));
+        m.put("filteredParticles", state.filteredParticles == null ? List.of() : new ArrayList<>(state.filteredParticles));
+        m.put("audioSourceEntity", state.audioSourceEntity == null ? "" : state.audioSourceEntity.toString());
+        m.put("hideNametags", uuidSetToStrings(state.hideNametags));
+        m.put("hiddenEntities", uuidSetToStrings(state.hideDuringExport));
+        Map<String, String> skins = new LinkedHashMap<>();
+        for (Map.Entry<UUID, GameProfile> entry : state.skinOverride.entrySet()) {
+            GameProfile gp = entry.getValue();
+            skins.put(entry.getKey().toString(), gp.name() != null && !gp.name().isBlank() ? gp.name() : gp.id().toString());
+        }
+        m.put("skinOverrides", skins);
         return m;
     }
 
@@ -701,13 +740,22 @@ public final class FlashbackVersionBridge262 implements FlashbackVersionBridge {
                 case "renderPlayers" -> v.renderPlayers = asBool(val, key);
                 case "renderParticles" -> v.renderParticles = asBool(val, key);
                 case "renderSky" -> v.renderSky = asBool(val, key);
+                case "skyColour" -> v.skyColour = parseColorArray(val, key);
                 case "renderNametags" -> v.renderNametags = asBool(val, key);
                 case "renderBeaconBeams" -> v.renderBeaconBeams = asBool(val, key);
                 case "overrideFog" -> v.overrideFog = asBool(val, key);
                 case "overrideFogStart" -> v.overrideFogStart = asFloat(val, key);
                 case "overrideFogEnd" -> v.overrideFogEnd = asFloat(val, key);
+                case "overrideFogColour" -> v.overrideFogColour = asBool(val, key);
+                case "fogColour" -> v.fogColour = parseColorArray(val, key);
                 case "overrideFov" -> v.overrideFov = asBool(val, key);
                 case "overrideFovAmount" -> v.setFov(asFloat(val, key));
+                case "overrideCameraShake" -> v.overrideCameraShake = asBool(val, key);
+                case "cameraShakeSplitParams" -> v.cameraShakeSplitParams = asBool(val, key);
+                case "cameraShakeXFrequency" -> v.cameraShakeXFrequency = asFloat(val, key);
+                case "cameraShakeXAmplitude" -> v.cameraShakeXAmplitude = asFloat(val, key);
+                case "cameraShakeYFrequency" -> v.cameraShakeYFrequency = asFloat(val, key);
+                case "cameraShakeYAmplitude" -> v.cameraShakeYAmplitude = asFloat(val, key);
                 case "overrideRoll" -> v.overrideRoll = asBool(val, key);
                 case "overrideRollAmount" -> v.overrideRollAmount = asFloat(val, key);
                 case "overrideWeatherMode" -> v.overrideWeatherMode = WeatherOverride.valueOf(String.valueOf(val).toUpperCase(Locale.ROOT));
@@ -716,6 +764,23 @@ public final class FlashbackVersionBridge262 implements FlashbackVersionBridge {
                 case "ruleOfThirdsGuide" -> v.ruleOfThirdsGuide = asBool(val, key);
                 case "centerGuide" -> v.centerGuide = asBool(val, key);
                 case "cameraPath" -> v.cameraPath = asBool(val, key);
+                case "sizing" -> v.sizing = Sizing.valueOf(String.valueOf(val).toUpperCase(Locale.ROOT));
+                case "changeAspectRatio" -> v.changeAspectRatio = AspectRatio.valueOf(String.valueOf(val).toUpperCase(Locale.ROOT));
+                case "disableServerResourcePack" -> v.disableServerResourcePack = asBool(val, key);
+                case "hideAllSpectators" -> state.hideAllSpectators = asBool(val, key);
+                case "filteredEntities" -> replaceStringSet(state.filteredEntities, val, key);
+                case "filteredParticles" -> replaceStringSet(state.filteredParticles, val, key);
+                case "audioSourceEntity" -> {
+                    if (val == null || String.valueOf(val).isBlank()) {
+                        state.audioSourceEntity = null;
+                    } else {
+                        List<UUID> matched = resolveEntityRef(String.valueOf(val));
+                        if (matched.isEmpty()) {
+                            throw ToolError.invalidParams("No loaded entity matched audioSourceEntity: " + val);
+                        }
+                        state.audioSourceEntity = matched.get(0);
+                    }
+                }
                 case "hideNametags" -> {
                     state.hideNametags.clear();
                     for (UUID id : parseUuidList(val, key)) {
@@ -725,6 +790,30 @@ public final class FlashbackVersionBridge262 implements FlashbackVersionBridge {
                 case "addHiddenNametags" -> state.hideNametags.addAll(parseUuidList(val, key));
                 case "removeHiddenNametags" -> state.hideNametags.removeAll(parseUuidList(val, key));
                 case "keepNametagsOnlyFor" -> applyKeepNametagsOnlyFor(state, parseStringSetLower(val, key));
+                case "hideEntities" -> state.hideDuringExport.addAll(resolveEntityRefList(val, key));
+                case "showEntities" -> state.hideDuringExport.removeAll(resolveEntityRefList(val, key));
+                case "clearHiddenEntities" -> {
+                    if (asBool(val, key)) {
+                        state.hideDuringExport.clear();
+                    }
+                }
+                case "keepEntitiesOnlyFor" -> {
+                    String scope = values.get("keepEntitiesScope") instanceof String s && !s.isBlank() ? s : "all";
+                    applyKeepEntitiesOnlyFor(state, parseStringSetLower(val, key), scope);
+                }
+                case "keepEntitiesScope", "skinOverrides", "skin_overrides" -> {
+                    // Handled alongside keepEntitiesOnlyFor / pre-applied by FabricDirectorBackend.
+                }
+                case "skinFileOverrides" -> configureEntities(Map.of("skin_file_overrides", val), Map.of());
+                case "nameOverrides" -> configureEntities(Map.of("name_overrides", val), Map.of());
+                case "glowingOverrides" -> configureEntities(Map.of("glowing_overrides", val), Map.of());
+                case "hiddenEquipment" -> configureEntities(Map.of("hidden_equipment", val), Map.of());
+                case "hiddenModelParts" -> configureEntities(Map.of("hidden_model_parts", val), Map.of());
+                case "hideTeamPrefix" -> configureEntities(Map.of("hide_team_prefix", val), Map.of());
+                case "hideTeamSuffix" -> configureEntities(Map.of("hide_team_suffix", val), Map.of());
+                case "hideBelowName" -> configureEntities(Map.of("hide_below_name", val), Map.of());
+                case "hideCape" -> configureEntities(Map.of("hide_cape", val), Map.of());
+                case "muteVoice" -> configureEntities(Map.of("mute_voice", val), Map.of());
                 default -> throw ToolError.invalidParams("Unknown visual setting: " + key);
             }
         }
@@ -732,18 +821,425 @@ public final class FlashbackVersionBridge262 implements FlashbackVersionBridge {
         return getVisuals();
     }
 
-    private static void applyKeepNametagsOnlyFor(EditorState state, java.util.Set<String> keepLowerNames) {
+    @Override
+    public Object resolveSkinProfile(String usernameOrUuid) {
+        String trimmed = usernameOrUuid == null ? "" : usernameOrUuid.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        UUID parsedUuid = tryParseUuidFlexible(trimmed);
+        if (parsedUuid != null) {
+            var result = mc.services().sessionService().fetchProfile(parsedUuid, true);
+            if (result != null && result.profile() != null) {
+                return result.profile();
+            }
+            Optional<GameProfile> resolved = mc.services().profileResolver().fetchById(parsedUuid);
+            if (resolved.isPresent()) {
+                return resolved.get();
+            }
+            throw ToolError.invalidParams("Could not resolve Mojang skin profile for UUID: " + trimmed);
+        }
+        Optional<GameProfile> byName = mc.services().profileResolver().fetchByName(trimmed);
+        if (byName.isPresent()) {
+            GameProfile gp = byName.get();
+            if (!gp.properties().containsKey("textures")) {
+                var full = mc.services().sessionService().fetchProfile(gp.id(), true);
+                if (full != null && full.profile() != null) {
+                    return full.profile();
+                }
+            }
+            return gp;
+        }
+        throw ToolError.invalidParams("Could not resolve Mojang skin profile for username: " + trimmed);
+    }
+
+    @Override
+    public Map<String, Object> configureEntities(Map<String, Object> options, Map<String, Object> preResolvedProfiles) {
+        EditorState state = requireEditorState();
+
+        if (Boolean.TRUE.equals(options.get("clear_hidden_entities"))) {
+            state.hideDuringExport.clear();
+        }
+        if (options.get("hide_all_spectators") instanceof Boolean b) {
+            state.hideAllSpectators = b;
+        }
+        if (options.get("filtered_entities") != null) {
+            replaceStringSet(state.filteredEntities, options.get("filtered_entities"), "filtered_entities");
+        }
+        if (options.get("filtered_particles") != null) {
+            replaceStringSet(state.filteredParticles, options.get("filtered_particles"), "filtered_particles");
+        }
+        if (options.get("keep_entities_only_for") != null) {
+            String scope = options.get("keep_entities_scope") instanceof String s && !s.isBlank() ? s : "all";
+            applyKeepEntitiesOnlyFor(state, parseStringSetLower(options.get("keep_entities_only_for"), "keep_entities_only_for"), scope);
+        }
+        if (options.get("hide_entities") != null) {
+            state.hideDuringExport.addAll(resolveEntityRefList(options.get("hide_entities"), "hide_entities"));
+        }
+        if (options.get("show_entities") != null) {
+            state.hideDuringExport.removeAll(resolveEntityRefList(options.get("show_entities"), "show_entities"));
+        }
+
+        if (options.get("keep_nametags_only_for") != null) {
+            applyKeepNametagsOnlyFor(state, parseStringSetLower(options.get("keep_nametags_only_for"), "keep_nametags_only_for"));
+        }
+        if (options.get("hide_nametags") != null) {
+            state.hideNametags.addAll(resolveEntityRefList(options.get("hide_nametags"), "hide_nametags"));
+        }
+        if (options.get("show_nametags") != null) {
+            state.hideNametags.removeAll(resolveEntityRefList(options.get("show_nametags"), "show_nametags"));
+        }
+
+        applyBooleanUuidMap(state.hideTeamPrefix, options.get("hide_team_prefix"), "hide_team_prefix");
+        applyBooleanUuidMap(state.hideTeamSuffix, options.get("hide_team_suffix"), "hide_team_suffix");
+        applyBooleanUuidMap(state.hideBelowName, options.get("hide_below_name"), "hide_below_name");
+        applyBooleanUuidMap(state.hideCape, options.get("hide_cape"), "hide_cape");
+        applyBooleanUuidMap(state.muteVoice, options.get("mute_voice"), "mute_voice");
+
+        if (options.containsKey("audio_source_entity")) {
+            Object rawAudio = options.get("audio_source_entity");
+            if (rawAudio == null || String.valueOf(rawAudio).isBlank()) {
+                state.audioSourceEntity = null;
+            } else {
+                List<UUID> matched = resolveEntityRef(String.valueOf(rawAudio));
+                if (matched.isEmpty()) {
+                    throw ToolError.invalidParams("No loaded entity matched audio_source_entity: " + rawAudio);
+                }
+                state.audioSourceEntity = matched.get(0);
+            }
+        }
+
+        if (options.get("name_overrides") instanceof Map<?, ?> nameMap) {
+            for (Map.Entry<?, ?> entry : nameMap.entrySet()) {
+                List<UUID> targets = requireEntityRef(String.valueOf(entry.getKey()), "name_overrides");
+                Object val = entry.getValue();
+                for (UUID uuid : targets) {
+                    if (val == null || String.valueOf(val).isEmpty()) {
+                        state.nameOverride.remove(uuid);
+                    } else {
+                        state.nameOverride.put(uuid, String.valueOf(val));
+                    }
+                }
+            }
+        }
+
+        if (options.get("skin_overrides") instanceof Map<?, ?> skinMap) {
+            for (Map.Entry<?, ?> entry : skinMap.entrySet()) {
+                List<UUID> targets = requireEntityRef(String.valueOf(entry.getKey()), "skin_overrides");
+                Object val = entry.getValue();
+                for (UUID uuid : targets) {
+                    if (val == null || String.valueOf(val).isBlank()) {
+                        state.skinOverride.remove(uuid);
+                        state.skinOverrideFromFile.remove(uuid);
+                    } else {
+                        String keyStr = String.valueOf(val).trim();
+                        Object resolved = preResolvedProfiles != null ? preResolvedProfiles.get(keyStr) : null;
+                        if (!(resolved instanceof GameProfile profile)) {
+                            throw ToolError.invalidParams("Skin profile was not resolved for: " + keyStr);
+                        }
+                        state.skinOverride.put(uuid, profile);
+                        state.skinOverrideFromFile.remove(uuid);
+                    }
+                }
+            }
+        }
+
+        if (options.get("skin_file_overrides") instanceof Map<?, ?> fileMap) {
+            for (Map.Entry<?, ?> entry : fileMap.entrySet()) {
+                List<UUID> targets = requireEntityRef(String.valueOf(entry.getKey()), "skin_file_overrides");
+                Object val = entry.getValue();
+                for (UUID uuid : targets) {
+                    if (val == null || String.valueOf(val).isBlank()) {
+                        state.skinOverrideFromFile.remove(uuid);
+                    } else {
+                        Path skinPath = Path.of(String.valueOf(val).trim());
+                        if (!Files.isRegularFile(skinPath)) {
+                            throw ToolError.invalidParams("Skin PNG file not found: " + skinPath);
+                        }
+                        state.skinOverride.remove(uuid);
+                        state.skinOverrideFromFile.put(uuid, new FilePlayerSkin(skinPath.toAbsolutePath().toString()));
+                    }
+                }
+            }
+        }
+
+        if (options.get("glowing_overrides") instanceof Map<?, ?> glowMap) {
+            for (Map.Entry<?, ?> entry : glowMap.entrySet()) {
+                List<UUID> targets = requireEntityRef(String.valueOf(entry.getKey()), "glowing_overrides");
+                String rawGlow = entry.getValue() == null ? "DEFAULT" : String.valueOf(entry.getValue()).trim().toUpperCase(Locale.ROOT);
+                GlowingOverride mode = GlowingOverride.valueOf(rawGlow);
+                for (UUID uuid : targets) {
+                    if (mode == GlowingOverride.DEFAULT) {
+                        state.glowingOverride.remove(uuid);
+                    } else {
+                        state.glowingOverride.put(uuid, mode);
+                    }
+                }
+            }
+        }
+
+        if (options.get("hidden_equipment") instanceof Map<?, ?> equipMap) {
+            for (Map.Entry<?, ?> entry : equipMap.entrySet()) {
+                List<UUID> targets = requireEntityRef(String.valueOf(entry.getKey()), "hidden_equipment");
+                EnumSet<EquipmentSlot> slots = EnumSet.noneOf(EquipmentSlot.class);
+                if (entry.getValue() instanceof List<?> list) {
+                    for (Object item : list) {
+                        slots.add(EquipmentSlot.valueOf(String.valueOf(item).trim().toUpperCase(Locale.ROOT)));
+                    }
+                }
+                for (UUID uuid : targets) {
+                    if (slots.isEmpty()) {
+                        state.hiddenEquipment.remove(uuid);
+                    } else {
+                        state.hiddenEquipment.put(uuid, EnumSet.copyOf(slots));
+                    }
+                }
+            }
+        }
+
+        if (options.get("hidden_model_parts") instanceof Map<?, ?> partsMap) {
+            for (Map.Entry<?, ?> entry : partsMap.entrySet()) {
+                List<UUID> targets = requireEntityRef(String.valueOf(entry.getKey()), "hidden_model_parts");
+                EnumSet<PlayerModelPart> parts = EnumSet.noneOf(PlayerModelPart.class);
+                if (entry.getValue() instanceof List<?> list) {
+                    for (Object item : list) {
+                        parts.add(PlayerModelPart.valueOf(String.valueOf(item).trim().toUpperCase(Locale.ROOT)));
+                    }
+                }
+                for (UUID uuid : targets) {
+                    if (parts.isEmpty()) {
+                        state.hiddenModelParts.remove(uuid);
+                    } else {
+                        state.hiddenModelParts.put(uuid, EnumSet.copyOf(parts));
+                    }
+                }
+            }
+        }
+
+        state.markDirty();
+        return buildEntityOverridesSummary(state);
+    }
+
+    private static Map<String, Object> buildEntityOverridesSummary(EditorState state) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("hidden_entities_count", state.hideDuringExport.size());
+        out.put("hidden_entities", uuidSetToStrings(state.hideDuringExport));
+        out.put("hide_all_spectators", state.hideAllSpectators);
+        out.put("filtered_entities", new ArrayList<>(state.filteredEntities));
+        out.put("filtered_particles", new ArrayList<>(state.filteredParticles));
+        out.put("hidden_nametags_count", state.hideNametags.size());
+
+        Map<String, String> skins = new LinkedHashMap<>();
+        for (Map.Entry<UUID, GameProfile> entry : state.skinOverride.entrySet()) {
+            GameProfile gp = entry.getValue();
+            skins.put(entry.getKey().toString(), gp.name() != null && !gp.name().isBlank() ? gp.name() : gp.id().toString());
+        }
+        out.put("skin_overrides", skins);
+        out.put("skin_file_overrides_count", state.skinOverrideFromFile.size());
+
+        Map<String, String> names = new LinkedHashMap<>();
+        for (Map.Entry<UUID, String> entry : state.nameOverride.entrySet()) {
+            names.put(entry.getKey().toString(), entry.getValue());
+        }
+        out.put("name_overrides", names);
+
+        Map<String, String> glowing = new LinkedHashMap<>();
+        for (Map.Entry<UUID, GlowingOverride> entry : state.glowingOverride.entrySet()) {
+            glowing.put(entry.getKey().toString(), entry.getValue().name());
+        }
+        out.put("glowing_overrides", glowing);
+
+        Map<String, List<String>> equip = new LinkedHashMap<>();
+        for (Map.Entry<UUID, EnumSet<EquipmentSlot>> entry : state.hiddenEquipment.entrySet()) {
+            equip.put(entry.getKey().toString(), entry.getValue().stream().map(Enum::name).toList());
+        }
+        out.put("hidden_equipment", equip);
+
+        Map<String, List<String>> parts = new LinkedHashMap<>();
+        for (Map.Entry<UUID, EnumSet<PlayerModelPart>> entry : state.hiddenModelParts.entrySet()) {
+            parts.put(entry.getKey().toString(), entry.getValue().stream().map(Enum::name).toList());
+        }
+        out.put("hidden_model_parts", parts);
+        out.put("audio_source_entity", state.audioSourceEntity == null ? "" : state.audioSourceEntity.toString());
+        out.put("muted_voice_count", state.muteVoice.size());
+        return out;
+    }
+
+    private static void applyKeepEntitiesOnlyFor(EditorState state, Set<String> keepLower, String scope) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null) {
+            return;
+        }
+        Entity cameraEntity = mc.getCameraEntity();
+        String normScope = scope == null ? "all" : scope.trim().toLowerCase(Locale.ROOT);
+        for (Entity entity : mc.level.entitiesForRendering()) {
+            if (entity == cameraEntity) {
+                continue;
+            }
+            boolean inScope = switch (normScope) {
+                case "all" -> true;
+                case "players" -> entity instanceof Player;
+                case "non_players" -> !(entity instanceof Player);
+                default -> throw ToolError.invalidParams("keep_entities_scope must be 'all', 'players', or 'non_players'");
+            };
+            if (!inScope) {
+                continue;
+            }
+            if (matchesAnyRef(entity, keepLower)) {
+                state.hideDuringExport.remove(entity.getUUID());
+            } else {
+                state.hideDuringExport.add(entity.getUUID());
+            }
+        }
+    }
+
+    private static void applyKeepNametagsOnlyFor(EditorState state, Set<String> keepLowerNames) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) {
             return;
         }
         state.replayVisuals.renderNametags = true;
         for (Entity entity : mc.level.entitiesForRendering()) {
-            String entityName = entity.getName().getString().trim().toLowerCase(Locale.ROOT);
-            if (keepLowerNames.contains(entityName)) {
+            if (matchesAnyRef(entity, keepLowerNames)) {
                 state.hideNametags.remove(entity.getUUID());
             } else {
                 state.hideNametags.add(entity.getUUID());
+            }
+        }
+    }
+
+    private static boolean matchesAnyRef(Entity entity, Set<String> refsLower) {
+        if (refsLower.contains(entity.getUUID().toString().toLowerCase(Locale.ROOT))) {
+            return true;
+        }
+        String entityName = entity.getName().getString().trim().toLowerCase(Locale.ROOT);
+        if (!entityName.isEmpty() && refsLower.contains(entityName)) {
+            return true;
+        }
+        if (entity instanceof Player player) {
+            String scoreName = player.getScoreboardName().trim().toLowerCase(Locale.ROOT);
+            if (!scoreName.isEmpty() && refsLower.contains(scoreName)) {
+                return true;
+            }
+            String profileName = player.getGameProfile().name();
+            if (profileName != null && refsLower.contains(profileName.trim().toLowerCase(Locale.ROOT))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static List<UUID> resolveEntityRef(String rawRef) {
+        String trimmed = rawRef == null ? "" : rawRef.trim();
+        if (trimmed.isEmpty()) {
+            return List.of();
+        }
+        UUID direct = tryParseUuidFlexible(trimmed);
+        if (direct != null) {
+            return List.of(direct);
+        }
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null) {
+            return List.of();
+        }
+        Set<String> target = Set.of(trimmed.toLowerCase(Locale.ROOT));
+        List<UUID> matched = new ArrayList<>();
+        for (Entity entity : mc.level.entitiesForRendering()) {
+            if (matchesAnyRef(entity, target)) {
+                matched.add(entity.getUUID());
+            }
+        }
+        return matched;
+    }
+
+    private static List<UUID> requireEntityRef(String rawRef, String field) {
+        List<UUID> matched = resolveEntityRef(rawRef);
+        if (matched.isEmpty()) {
+            throw ToolError.invalidParams("No loaded entity matched '" + rawRef + "' in " + field);
+        }
+        return matched;
+    }
+
+    private static List<UUID> resolveEntityRefList(Object raw, String key) {
+        if (!(raw instanceof List<?> list)) {
+            throw ToolError.invalidParams("Expected array of entity UUIDs or names for " + key);
+        }
+        List<UUID> out = new ArrayList<>();
+        for (Object item : list) {
+            if (item != null) {
+                out.addAll(resolveEntityRef(String.valueOf(item)));
+            }
+        }
+        return out;
+    }
+
+    private static void applyBooleanUuidMap(Set<UUID> targetSet, Object rawMap, String field) {
+        if (!(rawMap instanceof Map<?, ?> map)) {
+            return;
+        }
+        for (Map.Entry<?, ?> entry : map.entrySet()) {
+            boolean enabled = asBool(entry.getValue(), field);
+            List<UUID> targets = requireEntityRef(String.valueOf(entry.getKey()), field);
+            for (UUID uuid : targets) {
+                if (enabled) {
+                    targetSet.add(uuid);
+                } else {
+                    targetSet.remove(uuid);
+                }
+            }
+        }
+    }
+
+    private static UUID tryParseUuidFlexible(String value) {
+        String s = value.trim();
+        try {
+            if (s.length() == 36 && s.indexOf('-') >= 0) {
+                return UUID.fromString(s);
+            }
+            if (s.length() == 32 && s.matches("[0-9a-fA-F]{32}")) {
+                String dashed = s.substring(0, 8) + "-" + s.substring(8, 12) + "-" + s.substring(12, 16)
+                    + "-" + s.substring(16, 20) + "-" + s.substring(20);
+                return UUID.fromString(dashed);
+            }
+        } catch (IllegalArgumentException ignored) {
+        }
+        return null;
+    }
+
+    private static List<String> uuidSetToStrings(Set<UUID> set) {
+        return set == null ? List.of() : set.stream().map(UUID::toString).toList();
+    }
+
+    private static List<Float> colorArrayToList(float[] rgb) {
+        if (rgb == null || rgb.length < 3) {
+            return List.of(0.0f, 0.0f, 0.0f);
+        }
+        return List.of(rgb[0], rgb[1], rgb[2]);
+    }
+
+    private static float[] parseColorArray(Object raw, String key) {
+        if (!(raw instanceof List<?> list) || list.size() != 3) {
+            throw ToolError.invalidParams("Expected 3-element RGB array [r, g, b] in range 0..1 for " + key);
+        }
+        return new float[]{
+            asFloat(list.get(0), key + "[0]"),
+            asFloat(list.get(1), key + "[1]"),
+            asFloat(list.get(2), key + "[2]")
+        };
+    }
+
+    private static void replaceStringSet(Set<String> target, Object raw, String key) {
+        if (!(raw instanceof List<?> list)) {
+            throw ToolError.invalidParams("Expected array of strings for " + key);
+        }
+        target.clear();
+        for (Object item : list) {
+            if (item != null) {
+                String s = String.valueOf(item).trim();
+                if (!s.isEmpty()) {
+                    target.add(s);
+                }
             }
         }
     }
@@ -763,11 +1259,11 @@ public final class FlashbackVersionBridge262 implements FlashbackVersionBridge {
         return out;
     }
 
-    private static java.util.Set<String> parseStringSetLower(Object raw, String key) {
+    private static Set<String> parseStringSetLower(Object raw, String key) {
         if (!(raw instanceof List<?> list)) {
             throw ToolError.invalidParams("Expected array of strings for " + key);
         }
-        java.util.Set<String> out = new java.util.HashSet<>();
+        Set<String> out = new HashSet<>();
         for (Object item : list) {
             if (item != null) {
                 String s = String.valueOf(item).trim().toLowerCase(Locale.ROOT);
@@ -1051,6 +1547,8 @@ public final class FlashbackVersionBridge262 implements FlashbackVersionBridge {
             case "CAMERA_SHAKE" -> CameraShakeKeyframeType.INSTANCE;
             case "CAMERA_ORBIT" -> CameraOrbitKeyframeType.INSTANCE;
             case "TRACK_ENTITY" -> TrackEntityKeyframeType.INSTANCE;
+            case "AUDIO" -> AudioKeyframeType.INSTANCE;
+            case "BLOCK_OVERRIDE" -> BlockOverrideKeyframeType.INSTANCE;
             default -> throw ToolError.invalidParams("Unknown track type: " + name);
         };
     }
@@ -1065,6 +1563,8 @@ public final class FlashbackVersionBridge262 implements FlashbackVersionBridge {
         if (type == CameraShakeKeyframeType.INSTANCE) return "CAMERA_SHAKE";
         if (type == CameraOrbitKeyframeType.INSTANCE) return "CAMERA_ORBIT";
         if (type == TrackEntityKeyframeType.INSTANCE) return "TRACK_ENTITY";
+        if (type == AudioKeyframeType.INSTANCE) return "AUDIO";
+        if (type == BlockOverrideKeyframeType.INSTANCE) return "BLOCK_OVERRIDE";
         return type.id().toUpperCase(Locale.ROOT);
     }
 
@@ -1141,18 +1641,52 @@ public final class FlashbackVersionBridge262 implements FlashbackVersionBridge {
                 asFloat(m.getOrDefault("pitch", 20.0), "pitch"),
                 interp
             );
-            case "TRACK_ENTITY" -> new TrackEntityKeyframe(
-                UUID.fromString(String.valueOf(m.get("target"))),
-                m.get("trackingBodyPart") instanceof String bp
-                    ? TrackingBodyPart.valueOf(bp.toUpperCase(Locale.ROOT))
-                    : TrackingBodyPart.HEAD,
-                asFloat(m.getOrDefault("yawOffset", 0.0), "yawOffset"),
-                asFloat(m.getOrDefault("pitchOffset", 0.0), "pitchOffset"),
-                m.get("positionOffset") != null ? parseVector3d(m.get("positionOffset"), "positionOffset") : new Vector3d(),
-                m.get("viewOffset") != null ? parseVector3d(m.get("viewOffset"), "viewOffset") : new Vector3d(),
-                asFloat(m.getOrDefault("roll", 0.0), "roll"),
-                interp
-            );
+            case "TRACK_ENTITY" -> {
+                List<UUID> targets = requireEntityRef(String.valueOf(m.get("target")), "TRACK_ENTITY.target");
+                yield new TrackEntityKeyframe(
+                    targets.get(0),
+                    m.get("trackingBodyPart") instanceof String bp
+                        ? TrackingBodyPart.valueOf(bp.toUpperCase(Locale.ROOT))
+                        : TrackingBodyPart.HEAD,
+                    asFloat(m.getOrDefault("yawOffset", 0.0), "yawOffset"),
+                    asFloat(m.getOrDefault("pitchOffset", 0.0), "pitchOffset"),
+                    m.get("positionOffset") != null ? parseVector3d(m.get("positionOffset"), "positionOffset") : new Vector3d(),
+                    m.get("viewOffset") != null ? parseVector3d(m.get("viewOffset"), "viewOffset") : new Vector3d(),
+                    asFloat(m.getOrDefault("roll", 0.0), "roll"),
+                    interp
+                );
+            }
+            case "AUDIO" -> {
+                String pathStr = m.get("path") instanceof String s ? s.trim() : "";
+                if (pathStr.isEmpty()) {
+                    throw ToolError.invalidParams("AUDIO keyframe requires non-empty 'path'");
+                }
+                yield new AudioKeyframe(Path.of(pathStr));
+            }
+            case "BLOCK_OVERRIDE" -> {
+                BlockOverrideKeyframe kf = new BlockOverrideKeyframe();
+                if (!(m.get("blocks") instanceof List<?> entries) || entries.isEmpty()) {
+                    throw ToolError.invalidParams("BLOCK_OVERRIDE keyframe requires non-empty 'blocks' array");
+                }
+                for (Object entryObj : entries) {
+                    if (!(entryObj instanceof Map<?, ?> bm)) {
+                        throw ToolError.invalidParams("Each BLOCK_OVERRIDE entry must be an object {pos:[x,y,z], block:'minecraft:air'}");
+                    }
+                    Vector3d p = parseVector3d(bm.get("pos"), "pos");
+                    String blockId = bm.get("block") instanceof String s ? s.trim() : "";
+                    if (blockId.isEmpty() || blockId.equalsIgnoreCase("empty") || blockId.equalsIgnoreCase("clear")) {
+                        kf.setBlock((int) Math.floor(p.x), (int) Math.floor(p.y), (int) Math.floor(p.z), BlockOverrideKeyframe.EMPTY_STATE);
+                    } else {
+                        Identifier id = Identifier.tryParse(blockId.contains(":") ? blockId : "minecraft:" + blockId);
+                        Optional<Block> block = id == null ? Optional.empty() : BuiltInRegistries.BLOCK.getOptional(id);
+                        if (block.isEmpty()) {
+                            throw ToolError.invalidParams("Unknown block ID in BLOCK_OVERRIDE: " + blockId);
+                        }
+                        kf.setBlock((int) Math.floor(p.x), (int) Math.floor(p.y), (int) Math.floor(p.z), block.get().defaultBlockState());
+                    }
+                }
+                yield kf;
+            }
             default -> throw ToolError.invalidParams("Unsupported keyframe track type: " + type);
         };
     }
@@ -1200,6 +1734,10 @@ public final class FlashbackVersionBridge262 implements FlashbackVersionBridge {
             m.put("positionOffset", new Vec3(te.positionOffset.x, te.positionOffset.y, te.positionOffset.z).toList());
             m.put("viewOffset", new Vec3(te.viewOffset.x, te.viewOffset.y, te.viewOffset.z).toList());
             m.put("roll", te.roll);
+        } else if (kf instanceof AudioKeyframe audio) {
+            m.put("path", audio.path == null ? "" : audio.path.toString());
+        } else if (kf instanceof BlockOverrideKeyframe bo) {
+            m.put("sections", bo.blocks == null ? 0 : bo.blocks.size());
         }
         return m;
     }

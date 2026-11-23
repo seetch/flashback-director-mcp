@@ -106,6 +106,7 @@ public final class ToolDispatcher {
             case "history" -> backend.history(requireString(safeArgs, "action"));
             case "get_visuals" -> backend.getVisuals();
             case "set_visuals" -> backend.setVisuals(requireObject(safeArgs, "values"));
+            case "configure_entities" -> backend.configureEntities(safeArgs);
             case "create_shot" -> backend.createShot(parseShotRequest(safeArgs));
             case "set_export_range" -> backend.setExportRange(
                 optInt(safeArgs, "start_tick"),

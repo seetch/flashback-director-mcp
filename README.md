@@ -5,7 +5,7 @@
 Local Fabric addon and zero-dependency MCP server for **Minecraft 26.2 / 26.3** and **Flashback**.
 Control replays, scan highlights, validate camera collisions, build editable keyframes, inspect frames, and export video directly from your AI client.
 
-[![Release](https://img.shields.io/badge/release-v0.1.3-2ea44f)](https://github.com/seetch/flashback-director-mcp/releases/tag/v0.1.3)
+[![Release](https://img.shields.io/badge/release-v0.2.0-2ea44f)](https://github.com/seetch/flashback-director-mcp/releases/tag/v0.2.0)
 [![Minecraft](https://img.shields.io/badge/minecraft-26.2%20%7C%2026.3-555555)](https://github.com/seetch/flashback-director-mcp/releases/latest)
 [![Java](https://img.shields.io/badge/java-25%2B-b07219)](https://adoptium.net/)
 [![Node.js](https://img.shields.io/badge/node.js-18%2B-339933)](https://nodejs.org/)
@@ -51,9 +51,9 @@ Control replays, scan highlights, validate camera collisions, build editable key
 | --- | --- |
 | **Replay & Playback** | List, open, and close replays; play, pause, speed control, and settled tick/second seeking. |
 | **Scouting & Collisions** | Scan tick windows for movement, jump, combat, and entity-cluster highlights (`director_scan_highlights`); raycast camera splines and line of sight against loaded blocks (`director_check_path`). |
-| **Timeline & Keyframes** | Manage scenes, tracks, and undo/redo history using native Flashback history actions; edit `CAMERA`, `FOV`, `SPEED`, `TIMELAPSE`, `TIME_OF_DAY`, `FREEZE`, `CAMERA_SHAKE`, `CAMERA_ORBIT`, and `TRACK_ENTITY` tracks. |
+| **Timeline & Keyframes** | Manage scenes, tracks, and undo/redo history using native Flashback history actions; edit all 11 track types: `CAMERA`, `FOV`, `SPEED`, `TIMELAPSE`, `TIME_OF_DAY`, `FREEZE`, `CAMERA_SHAKE`, `CAMERA_ORBIT`, `TRACK_ENTITY`, `AUDIO`, and `BLOCK_OVERRIDE`. |
 | **Shot Presets** | Generate editable Flashback keyframes for `flyover`, `orbit`, `dolly_reveal`, `follow_parallax`, and `impact_freeze` with automatic obstacle avoidance (`director_create_shot`). |
-| **Visuals & Nametags** | Toggle HUD, weather, time of day, fog, and per-entity nametag visibility (`hideNametags`, `addHiddenNametags`, `removeHiddenNametags`, `keepNametagsOnlyFor`) to hide NPC and hologram text while keeping chosen players visible. |
+| **Visuals & Entities** | Full Flashback visuals (HUD, weather, time of day, sky/fog colors, camera shake, sizing/aspect ratio, server pack toggle) and per-entity overrides (`director_configure_entities`): hide NPC/hologram models and nametags, apply player skins by Mojang username/UUID or local PNG, rename, force glowing, hide capes/equipment/model parts, mute voice, and filter entity/particle types. |
 | **Previews & Export** | Capture Vulkan-safe PNG previews via Blaze3D (`director_screenshot`) and trigger Flashback video/WebP/GIF exports (`director_export_video`). |
 
 ---
@@ -77,7 +77,7 @@ Control replays, scan highlights, validate camera collisions, build editable key
 
 Download the files for your Minecraft version from [Releases](https://github.com/seetch/flashback-director-mcp/releases/latest):
 
-- Put `flashback-director-mcp-0.1.3+mc26.2.jar` (or `+mc26.3.jar`) into your Minecraft profile's `mods` folder alongside **Fabric API** and **Flashback**.
+- Put `flashback-director-mcp-0.2.0+mc26.2.jar` (or `+mc26.3.jar`) into your Minecraft profile's `mods` folder alongside **Fabric API** and **Flashback**.
 - Save `flashback-director-mcp.mjs` in a permanent local folder (no `npm install` needed).
 
 ### 2. Connect your AI client
@@ -121,14 +121,14 @@ Flashback is proprietary and is **not** distributed in this repository.
 - Disabled by default on first launch; enabled manually via the in-game button.
 - Binds exclusively to `127.0.0.1` on an ephemeral port.
 - Generates a fresh 256-bit Bearer token on every start, saved to `~/.flashback-director-mcp/bridge.json` with owner-only file permissions and removed on stop/exit.
-- Hard 2 MB request body limit; zero external network requests, zero npm dependencies, zero telemetry.
+- Hard 2 MB request body limit; zero npm dependencies, zero telemetry (skin lookups use Minecraft's built-in Mojang profile resolver only when explicitly requested).
 
 ---
 
 ## Project Layout
 
 ```text
-core/             Pure Java 25 HTTP bridge, auth, JSON parser, 22-tool dispatcher, spline math & highlight scorer
+core/             Pure Java 25 HTTP bridge, auth, JSON parser, 23-tool dispatcher, spline math & highlight scorer
 fabric-shared/    Shared Fabric layer: client-thread executor, Level.clip collision checker, Blaze3D screenshots
 mc-26.2/          Minecraft 26.2 + Flashback adapter and Mixin accessors
 mc-26.3/          Minecraft 26.3 (SDL/Vulkan) + Flashback adapter and Mixin accessors

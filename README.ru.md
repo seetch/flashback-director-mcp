@@ -5,7 +5,7 @@
 Локальный Fabric-аддон и автономный MCP-сервер без зависимостей для **Minecraft 26.2 / 26.3** и **Flashback**.
 Позволяет ИИ-клиенту находить сильные моменты в реплее, проверять коллизии камеры с блоками, собирать редактируемые кейфреймы, проверять ракурсы скриншотами и экспортировать видео.
 
-[![Release](https://img.shields.io/badge/release-v0.1.3-2ea44f)](https://github.com/seetch/flashback-director-mcp/releases/tag/v0.1.3)
+[![Release](https://img.shields.io/badge/release-v0.2.0-2ea44f)](https://github.com/seetch/flashback-director-mcp/releases/tag/v0.2.0)
 [![Minecraft](https://img.shields.io/badge/minecraft-26.2%20%7C%2026.3-555555)](https://github.com/seetch/flashback-director-mcp/releases/latest)
 [![Java](https://img.shields.io/badge/java-25%2B-b07219)](https://adoptium.net/)
 [![Node.js](https://img.shields.io/badge/node.js-18%2B-339933)](https://nodejs.org/)
@@ -51,9 +51,9 @@
 | --- | --- |
 | **Реплеи и воспроизведение** | Список, открытие и закрытие реплеев; пауза, скорость и перемотка по тикам/секундам с ожиданием прогрузки мира. |
 | **Разведка и коллизии** | Поиск ярких моментов по всплескам скорости, прыжкам, урону и скоплениям сущностей (`director_scan_highlights`); рейкаст траектории и линии видимости до цели (`director_check_path`). |
-| **Таймлайн и кейфреймы** | Управление сценами, дорожками и историей undo/redo через нативные действия Flashback; редактирование `CAMERA`, `FOV`, `SPEED`, `TIMELAPSE`, `TIME_OF_DAY`, `FREEZE`, `CAMERA_SHAKE`, `CAMERA_ORBIT`, `TRACK_ENTITY`. |
+| **Таймлайн и кейфреймы** | Управление сценами, дорожками и историей undo/redo через нативные действия Flashback; редактирование всех 11 типов дорожек: `CAMERA`, `FOV`, `SPEED`, `TIMELAPSE`, `TIME_OF_DAY`, `FREEZE`, `CAMERA_SHAKE`, `CAMERA_ORBIT`, `TRACK_ENTITY`, `AUDIO` и `BLOCK_OVERRIDE`. |
 | **Режиссёрские пресеты** | Генерация обычных редактируемых кейфреймов для планов `flyover`, `orbit`, `dolly_reveal`, `follow_parallax` и `impact_freeze` с автоматическим обходом препятствий (`director_create_shot`). |
-| **Визуал и ники** | Управление HUD, погодой, временем суток, туманом и точечное скрытие имён сущностей (`hideNametags`, `addHiddenNametags`, `removeHiddenNametags`, `keepNametagsOnlyFor`) - можно убрать все голограммы и ники NPC, оставив только нужных игроков. |
+| **Визуал и сущности** | Полные настройки визуала Flashback (HUD, погода, время суток, цвет неба/тумана, тряска камеры, соотношение сторон и масштабирование) и управление сущностями (`director_configure_entities`): скрытие моделей NPC и голограмм, смена скина по нику/UUID Mojang или из PNG, переименование, свечение, скрытие плащей/экипировки/частей модели, мут голоса и фильтры сущностей/частиц. |
 | **Превью и экспорт** | Скриншоты через Blaze3D без сырых вызовов OpenGL (`director_screenshot`, совместимо с Vulkan) и экспорт видео/WebP/GIF через Flashback (`director_export_video`). |
 
 ---
@@ -77,7 +77,7 @@
 
 Скачайте файлы под вашу версию Minecraft со страницы [Releases](https://github.com/seetch/flashback-director-mcp/releases/latest):
 
-- Положите `flashback-director-mcp-0.1.3+mc26.2.jar` (или `+mc26.3.jar`) в папку `mods` вашего профиля вместе с **Fabric API** и **Flashback**.
+- Положите `flashback-director-mcp-0.2.0+mc26.2.jar` (или `+mc26.3.jar`) в папку `mods` вашего профиля вместе с **Fabric API** и **Flashback**.
 - Сохраните `flashback-director-mcp.mjs` в постоянную папку (`npm install` не требуется).
 
 ### 2. Подключите к ИИ-клиенту
@@ -121,14 +121,14 @@ node "C:\путь\к\flashback-director-mcp.mjs" --print-config antigravity
 - При первом запуске мост выключен по умолчанию и включается вручную кнопкой в игре.
 - Слушает строго `127.0.0.1` на случайном свободном порту.
 - На каждый запуск создаёт новый 256-битный Bearer-токен в `~/.flashback-director-mcp/bridge.json` с правами только для текущего пользователя ОС; при выключении или закрытии игры файл удаляется.
-- Лимит тела запроса 2 МБ; нет внешних сетевых запросов, сторонних npm-пакетов и телеметрии.
+- Лимит тела запроса 2 МБ; нет сторонних npm-пакетов и телеметрии (загрузка скинов использует встроенный резолвер профилей Mojang в Minecraft только при явном запросе `skin_overrides`).
 
 ---
 
 ## Структура проекта
 
 ```text
-core/             Чистая Java 25: HTTP-мост, авторизация, JSON-парсер, диспетчер 22 инструментов, математика и скоринг
+core/             Чистая Java 25: HTTP-мост, авторизация, JSON-парсер, диспетчер 23 инструментов, математика и скоринг
 fabric-shared/    Общий слой Fabric: клиентский поток, проверка коллизий Level.clip, Blaze3D-скриншоты
 mc-26.2/          Адаптер Minecraft 26.2 + Flashback и Mixin-аксессоры
 mc-26.3/          Адаптер Minecraft 26.3 (SDL/Vulkan) + Flashback и Mixin-аксессоры

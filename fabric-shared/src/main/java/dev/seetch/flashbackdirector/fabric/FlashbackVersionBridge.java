@@ -61,6 +61,11 @@ public interface FlashbackVersionBridge {
 
     Map<String, Object> setVisuals(Map<String, Object> values);
 
+    // Runs off the client thread to resolve Mojang skin profiles without blocking rendering.
+    Object resolveSkinProfile(String usernameOrUuid);
+
+    Map<String, Object> configureEntities(Map<String, Object> options, Map<String, Object> preResolvedProfiles);
+
     Map<String, Object> setExportRange(Integer startTick, Integer endTick, boolean clear);
 
     Map<String, Object> exportVideo(Map<String, Object> options);

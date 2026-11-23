@@ -12,7 +12,7 @@ import path from 'node:path';
 import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
 
-const SERVER_VERSION = '0.1.3';
+const SERVER_VERSION = '0.2.0';
 const PROTOCOL_VERSIONS = ['2024-11-05', '2025-03-26', '2025-06-18', '2025-11-25'];
 const LATEST_PROTOCOL_VERSION = PROTOCOL_VERSIONS.at(-1);
 const BRIDGE_FILE = process.env.FLASHBACK_DIRECTOR_BRIDGE_FILE
@@ -203,7 +203,7 @@ const TOOLS = [
         track: { type: 'integer', description: 'Track index (for remove/update).' },
         type: {
           type: 'string',
-          description: 'Track type for add: CAMERA, FOV, SPEED, TIMELAPSE, TIME_OF_DAY, FREEZE, CAMERA_SHAKE, CAMERA_ORBIT, TRACK_ENTITY.',
+          description: 'Track type for add: CAMERA, FOV, SPEED, TIMELAPSE, TIME_OF_DAY, FREEZE, CAMERA_SHAKE, CAMERA_ORBIT, TRACK_ENTITY, AUDIO, BLOCK_OVERRIDE.',
         },
         name: { type: ['string', 'null'] },
         enabled: { type: 'boolean' },
@@ -213,7 +213,7 @@ const TOOLS = [
   },
   {
     name: 'director_set_keyframes',
-    description: 'Atomically write or replace keyframes on a track (undoable). Supports CAMERA (with optional look_at), FOV, SPEED, TIMELAPSE, TIME_OF_DAY, FREEZE, CAMERA_SHAKE, CAMERA_ORBIT, TRACK_ENTITY and interpolation modes (SMOOTH, LINEAR, EASE_IN, EASE_OUT, EASE_IN_OUT, HOLD, HERMITE).',
+    description: 'Atomically write or replace keyframes on a track (undoable). Supports all 11 Flashback track types: CAMERA (with optional look_at and automatic yaw unwrap), FOV, SPEED, TIMELAPSE, TIME_OF_DAY, FREEZE, CAMERA_SHAKE, CAMERA_ORBIT, TRACK_ENTITY (UUID or entity name), AUDIO ({path}), BLOCK_OVERRIDE ({blocks:[{pos:[x,y,z], block}]}), and interpolation modes (SMOOTH, LINEAR, EASE_IN, EASE_OUT, EASE_IN_OUT, HOLD, HERMITE).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -253,18 +253,50 @@ const TOOLS = [
   },
   {
     name: 'director_get_visuals',
-    description: 'Read current Flashback Visuals settings (HUD visibility, nametags, sky, particles, weather, time of day, fog, FOV).',
+    description: 'Read all Flashback Visuals and global EditorState settings (HUD visibility, render toggles, sky/fog colours, camera shake override, roll/FOV overrides, weather, time of day, sizing/aspect ratio, server resource pack toggle, spectator hiding, entity/particle type filters, audio source, hidden entities/nametags).',
     inputSchema: { type: 'object', properties: {} },
   },
   {
     name: 'director_set_visuals',
-    description: 'Update Flashback Visuals settings using keys returned by director_get_visuals. Also supports per-entity nametag filtering: hideNametags (UUID list), addHiddenNametags (UUID list), removeHiddenNametags (UUID list), and keepNametagsOnlyFor (list of entity/player names to keep visible while hiding all other loaded NPC/hologram nametags).',
+    description: 'Update Flashback Visuals and global EditorState settings using keys returned by director_get_visuals (including skyColour, overrideFogColour, fogColour, overrideCameraShake, cameraShake* params, sizing, changeAspectRatio, disableServerResourcePack, hideAllSpectators, filteredEntities, filteredParticles, audioSourceEntity, keepNametagsOnlyFor, keepEntitiesOnlyFor, hideEntities, showEntities).',
     inputSchema: {
       type: 'object',
       properties: {
         values: { type: 'object', description: 'Map of visual setting name -> value.' },
       },
       required: ['values'],
+    },
+  },
+  {
+    name: 'director_configure_entities',
+    description: 'Configure per-entity Flashback overrides (hide/show entity models & NPCs, change player skins by Mojang username/UUID or local PNG file, rename nametags, hide capes/team prefixes/suffixes/below-name text, force glowing, hide armor/equipment slots or player model parts, mute voice, set audio source, filter entity/particle types). Entity keys accept UUID or exact case-insensitive entity/player name.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        hide_entities: { type: 'array', items: { type: 'string' }, description: 'Entity UUIDs or names to hide (both model and nametag).' },
+        show_entities: { type: 'array', items: { type: 'string' }, description: 'Entity UUIDs or names to unhide.' },
+        clear_hidden_entities: { type: 'boolean', description: 'Clear all hidden entities before applying other options.' },
+        keep_entities_only_for: { type: 'array', items: { type: 'string' }, description: 'Keep ONLY these entity names/UUIDs visible and hide all other loaded entities in scope.' },
+        keep_entities_scope: { type: 'string', enum: ['all', 'players', 'non_players'], description: 'Scope for keep_entities_only_for (default "all").' },
+        hide_all_spectators: { type: 'boolean', description: 'Hide all spectator-mode players.' },
+        filtered_entities: { type: 'array', items: { type: 'string' }, description: 'Entity type IDs to hide globally (e.g. ["minecraft:armor_stand"]).' },
+        filtered_particles: { type: 'array', items: { type: 'string' }, description: 'Particle type IDs to hide globally (e.g. ["minecraft:smoke"]).' },
+        skin_overrides: { type: 'object', description: 'Map of target entity name/UUID -> Mojang username or UUID (or null/"" to reset skin).' },
+        skin_file_overrides: { type: 'object', description: 'Map of target entity name/UUID -> local .png skin file path (or null/"" to reset).' },
+        name_overrides: { type: 'object', description: 'Map of target entity name/UUID -> replacement display name (or null/"" to reset).' },
+        hide_nametags: { type: 'array', items: { type: 'string' } },
+        show_nametags: { type: 'array', items: { type: 'string' } },
+        keep_nametags_only_for: { type: 'array', items: { type: 'string' } },
+        hide_team_prefix: { type: 'object', description: 'Map of entity name/UUID -> boolean.' },
+        hide_team_suffix: { type: 'object', description: 'Map of entity name/UUID -> boolean.' },
+        hide_below_name: { type: 'object', description: 'Map of entity name/UUID -> boolean.' },
+        hide_cape: { type: 'object', description: 'Map of entity name/UUID -> boolean.' },
+        glowing_overrides: { type: 'object', description: 'Map of entity name/UUID -> "DEFAULT" | "FORCE_GLOW" | "FORCE_NO_GLOW".' },
+        hidden_equipment: { type: 'object', description: 'Map of entity name/UUID -> array of slots (HEAD, CHEST, LEGS, FEET, MAINHAND, OFFHAND, BODY, SADDLE).' },
+        hidden_model_parts: { type: 'object', description: 'Map of entity name/UUID -> array of parts (CAPE, JACKET, LEFT_SLEEVE, RIGHT_SLEEVE, LEFT_PANTS_LEG, RIGHT_PANTS_LEG, HAT).' },
+        audio_source_entity: { type: ['string', 'null'], description: 'Entity name/UUID to use as audio listener (or null/"" to reset).' },
+        mute_voice: { type: 'object', description: 'Map of entity name/UUID -> boolean to mute Simple Voice Chat.' },
+      },
     },
   },
   {
@@ -321,11 +353,19 @@ const TOOLS = [
         container: { type: 'string' },
         codec: { type: 'string' },
         encoder: { type: 'string' },
+        audio_codec: { type: 'string' },
+        projection: { type: 'string', description: 'PERSPECTIVE, ORTHOGRAPHIC, EQUIRECTANGULAR, etc.' },
+        orthographic_zoom: { type: 'number' },
         bitrate: { type: ['string', 'number'] },
         record_audio: { type: 'boolean' },
         stereo_audio: { type: 'boolean' },
         ssaa: { type: 'boolean' },
         no_gui: { type: 'boolean' },
+        reset_rng: { type: 'boolean' },
+        depth_map: { type: 'boolean' },
+        transparent: { type: 'boolean' },
+        sequence_format: { type: 'string' },
+        name: { type: 'string' },
         wait: { type: 'boolean', description: 'Wait until export completes (default false).' },
         wait_seconds: { type: 'number', description: 'Max seconds to wait when wait=true (default 600).' },
       },

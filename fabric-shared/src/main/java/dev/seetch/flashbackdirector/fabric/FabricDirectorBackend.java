@@ -297,10 +297,54 @@ public final class FabricDirectorBackend implements DirectorBackend {
 
     @Override
     public Map<String, Object> setVisuals(Map<String, Object> values) {
+        Map<?, ?> skinMap = extractSkinMap(values, "skinOverrides", "skin_overrides");
+        Map<String, Object> resolvedProfiles = resolveSkinsFromOption(values, "skinOverrides", "skin_overrides");
         return ClientThreadExecutor.runSync(() -> {
             requireReplay();
+            if (skinMap != null && !skinMap.isEmpty()) {
+                fb.configureEntities(Map.of("skin_overrides", skinMap), resolvedProfiles);
+            }
             return fb.setVisuals(values);
         }, ClientThreadExecutor.DEFAULT_TIMEOUT_MS, "director_set_visuals");
+    }
+
+    @Override
+    public Map<String, Object> configureEntities(Map<String, Object> options) {
+        Map<String, Object> resolvedProfiles = resolveSkinsFromOption(options, "skin_overrides", "skinOverrides");
+        return ClientThreadExecutor.runSync(() -> {
+            requireReplay();
+            return fb.configureEntities(options == null ? Map.of() : options, resolvedProfiles);
+        }, ClientThreadExecutor.DEFAULT_TIMEOUT_MS, "director_configure_entities");
+    }
+
+    private Map<String, Object> resolveSkinsFromOption(Map<String, Object> options, String key1, String key2) {
+        Map<String, Object> resolvedProfiles = new LinkedHashMap<>();
+        Map<?, ?> skinMap = extractSkinMap(options, key1, key2);
+        if (skinMap != null) {
+            for (Map.Entry<?, ?> entry : skinMap.entrySet()) {
+                Object rawValue = entry.getValue();
+                if (rawValue instanceof String s && !s.isBlank()) {
+                    String trimmed = s.trim();
+                    if (!resolvedProfiles.containsKey(trimmed)) {
+                        resolvedProfiles.put(trimmed, fb.resolveSkinProfile(trimmed));
+                    }
+                }
+            }
+        }
+        return resolvedProfiles;
+    }
+
+    private static Map<?, ?> extractSkinMap(Map<String, Object> options, String key1, String key2) {
+        if (options == null) {
+            return null;
+        }
+        if (options.get(key1) instanceof Map<?, ?> m1) {
+            return m1;
+        }
+        if (options.get(key2) instanceof Map<?, ?> m2) {
+            return m2;
+        }
+        return null;
     }
 
     @Override

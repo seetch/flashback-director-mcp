@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Contract implemented by the Fabric layer to execute all 22 director_* MCP tools.
+ * Contract implemented by the Fabric layer to execute all 23 director_* MCP tools.
  */
 public interface DirectorBackend {
 
@@ -51,6 +51,8 @@ public interface DirectorBackend {
     Map<String, Object> getVisuals();
 
     Map<String, Object> setVisuals(Map<String, Object> values);
+
+    Map<String, Object> configureEntities(Map<String, Object> options);
 
     // Cinematic Macros & Export (3)
     Map<String, Object> createShot(ShotPresetRequest request);
