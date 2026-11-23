@@ -12,7 +12,7 @@ import path from 'node:path';
 import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
 
-const SERVER_VERSION = '0.1.1';
+const SERVER_VERSION = '0.1.2';
 const PROTOCOL_VERSIONS = ['2024-11-05', '2025-03-26', '2025-06-18', '2025-11-25'];
 const LATEST_PROTOCOL_VERSION = PROTOCOL_VERSIONS.at(-1);
 const BRIDGE_FILE = process.env.FLASHBACK_DIRECTOR_BRIDGE_FILE
@@ -258,7 +258,7 @@ const TOOLS = [
   },
   {
     name: 'director_set_visuals',
-    description: 'Update Flashback Visuals settings using keys returned by director_get_visuals.',
+    description: 'Update Flashback Visuals settings using keys returned by director_get_visuals. Also supports per-entity nametag filtering: hideNametags (UUID list), addHiddenNametags (UUID list), removeHiddenNametags (UUID list), and keepNametagsOnlyFor (list of entity/player names to keep visible while hiding all other loaded NPC/hologram nametags).',
     inputSchema: {
       type: 'object',
       properties: {

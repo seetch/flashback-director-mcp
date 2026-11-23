@@ -440,7 +440,7 @@ public final class FlashbackVersionBridge263 implements FlashbackVersionBridge {
                     int addedIndex = scene.keyframeTracks.size();
                     List<EditorSceneHistoryAction> redo = List.of(new EditorSceneHistoryAction.AddTrack(type, addedIndex));
                     List<EditorSceneHistoryAction> undo = List.of(new EditorSceneHistoryAction.RemoveTrack(type, addedIndex));
-                    applyActions(scene, redo);
+                    scene.push(new EditorSceneHistoryEntry(undo, redo, "Add track"));
                     KeyframeTrack track = scene.keyframeTracks.get(addedIndex);
                     if (name != null && !name.isBlank()) {
                         track.customName = name;
@@ -448,7 +448,6 @@ public final class FlashbackVersionBridge263 implements FlashbackVersionBridge {
                     if (enabled != null) {
                         track.enabled = enabled;
                     }
-                    scene.push(new EditorSceneHistoryEntry(undo, redo, "Add track"));
                     state.markDirty();
                     return Map.of("index", addedIndex, "type", trackTypeName(type));
                 }
@@ -462,7 +461,6 @@ public final class FlashbackVersionBridge263 implements FlashbackVersionBridge {
                     for (Map.Entry<Integer, Keyframe> entry : removed.keyframesByTick.entrySet()) {
                         undo.add(new EditorSceneHistoryAction.SetKeyframe(type, idx, entry.getKey(), entry.getValue().copy()));
                     }
-                    applyActions(scene, redo);
                     scene.push(new EditorSceneHistoryEntry(undo, redo, "Remove track"));
                     state.markDirty();
                     return Map.of("removed_index", idx, "remaining_tracks", scene.keyframeTracks.size());
@@ -560,7 +558,6 @@ public final class FlashbackVersionBridge263 implements FlashbackVersionBridge {
                 undo.add(new EditorSceneHistoryAction.RemoveTrack(type, idx));
             }
 
-            applyActions(scene, redo);
             scene.push(new EditorSceneHistoryEntry(undo, redo, "Set keyframes (" + canonicalType + ")"));
             state.markDirty();
 
@@ -607,7 +604,6 @@ public final class FlashbackVersionBridge263 implements FlashbackVersionBridge {
             }
 
             if (!redo.isEmpty()) {
-                applyActions(scene, redo);
                 scene.push(new EditorSceneHistoryEntry(undo, redo, "Remove keyframes"));
                 state.markDirty();
             }
@@ -615,12 +611,6 @@ public final class FlashbackVersionBridge263 implements FlashbackVersionBridge {
             return Map.of("track", idx, "removed", redo.size(), "remaining", track.keyframesByTick.size());
         } finally {
             state.release(stamp);
-        }
-    }
-
-    private static void applyActions(EditorScene scene, List<EditorSceneHistoryAction> actions) {
-        for (EditorSceneHistoryAction action : actions) {
-            action.apply(scene);
         }
     }
 
@@ -645,7 +635,8 @@ public final class FlashbackVersionBridge263 implements FlashbackVersionBridge {
 
     @Override
     public Map<String, Object> getVisuals() {
-        ReplayVisuals v = requireEditorState().replayVisuals;
+        EditorState state = requireEditorState();
+        ReplayVisuals v = state.replayVisuals;
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("showChat", v.showChat);
         m.put("showBossBar", v.showBossBar);
@@ -673,6 +664,10 @@ public final class FlashbackVersionBridge263 implements FlashbackVersionBridge {
         m.put("ruleOfThirdsGuide", v.ruleOfThirdsGuide);
         m.put("centerGuide", v.centerGuide);
         m.put("cameraPath", v.cameraPath);
+        List<String> hiddenTags = state.hideNametags == null
+            ? List.of()
+            : state.hideNametags.stream().map(UUID::toString).toList();
+        m.put("hideNametags", hiddenTags);
         return m;
     }
 
@@ -710,11 +705,67 @@ public final class FlashbackVersionBridge263 implements FlashbackVersionBridge {
                 case "ruleOfThirdsGuide" -> v.ruleOfThirdsGuide = asBool(val, key);
                 case "centerGuide" -> v.centerGuide = asBool(val, key);
                 case "cameraPath" -> v.cameraPath = asBool(val, key);
+                case "hideNametags" -> {
+                    state.hideNametags.clear();
+                    for (UUID id : parseUuidList(val, key)) {
+                        state.hideNametags.add(id);
+                    }
+                }
+                case "addHiddenNametags" -> state.hideNametags.addAll(parseUuidList(val, key));
+                case "removeHiddenNametags" -> state.hideNametags.removeAll(parseUuidList(val, key));
+                case "keepNametagsOnlyFor" -> applyKeepNametagsOnlyFor(state, parseStringSetLower(val, key));
                 default -> throw ToolError.invalidParams("Unknown visual setting: " + key);
             }
         }
         state.markDirty();
         return getVisuals();
+    }
+
+    private static void applyKeepNametagsOnlyFor(EditorState state, java.util.Set<String> keepLowerNames) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null) {
+            return;
+        }
+        state.replayVisuals.renderNametags = true;
+        for (Entity entity : mc.level.entitiesForRendering()) {
+            String entityName = entity.getName().getString().trim().toLowerCase(Locale.ROOT);
+            if (keepLowerNames.contains(entityName)) {
+                state.hideNametags.remove(entity.getUUID());
+            } else {
+                state.hideNametags.add(entity.getUUID());
+            }
+        }
+    }
+
+    private static List<UUID> parseUuidList(Object raw, String key) {
+        if (!(raw instanceof List<?> list)) {
+            throw ToolError.invalidParams("Expected array of UUID strings for " + key);
+        }
+        List<UUID> out = new ArrayList<>(list.size());
+        for (Object item : list) {
+            try {
+                out.add(UUID.fromString(String.valueOf(item)));
+            } catch (IllegalArgumentException e) {
+                throw ToolError.invalidParams("Invalid UUID in " + key + ": " + item);
+            }
+        }
+        return out;
+    }
+
+    private static java.util.Set<String> parseStringSetLower(Object raw, String key) {
+        if (!(raw instanceof List<?> list)) {
+            throw ToolError.invalidParams("Expected array of strings for " + key);
+        }
+        java.util.Set<String> out = new java.util.HashSet<>();
+        for (Object item : list) {
+            if (item != null) {
+                String s = String.valueOf(item).trim().toLowerCase(Locale.ROOT);
+                if (!s.isEmpty()) {
+                    out.add(s);
+                }
+            }
+        }
+        return out;
     }
 
     @Override
