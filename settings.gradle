@@ -1,0 +1,20 @@
+pluginManagement {
+    repositories {
+        maven {
+            name = 'Fabric'
+            url = 'https://maven.fabricmc.net/'
+        }
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+rootProject.name = 'flashback-director-mcp'
+
+include 'core'
+include 'mc-26.2'
+
+// Include mc-26.3 automatically when its Flashback JAR is present or -PenableMc263=true is passed.
+if (file('libs/Flashback-for-MC26.3.jar').exists() || providers.gradleProperty('enableMc263').isPresent()) {
+    include 'mc-26.3'
+}

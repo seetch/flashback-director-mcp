@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "package": "dev.seetch.flashbackdirector.mc263.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "TickrateKeyframeAccessor",
+    "FreezeKeyframeAccessor",
+    "CameraShakeKeyframeAccessor"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

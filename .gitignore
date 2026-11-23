@@ -1,0 +1,38 @@
+# Gradle & Build
+.gradle/
+build/
+out/
+**/build/
+**/out/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+
+# Proprietary / local Flashback JARs (never commit)
+libs/*.jar
+
+# Minecraft run directory
+run/
+**/run/
+
+# Local runtime & OS files
+.DS_Store
+Thumbs.db
+bridge.json
+
+# Local agent files
+AGENTS.md
+CLAUDE.md
+AGENT.md
+GEMINI.md
+.codex/
+.claude/
+.agents/
+.superpowers/

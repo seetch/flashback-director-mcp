@@ -1,0 +1,27 @@
+subprojects {
+    group = property('maven_group')
+    version = property('mod_version')
+
+    repositories {
+        mavenCentral()
+        maven {
+            name = 'Fabric'
+            url = 'https://maven.fabricmc.net/'
+        }
+    }
+
+    plugins.withType(JavaPlugin).configureEach {
+        def targetJava = Integer.parseInt(project.property('java_version').toString())
+        java {
+            toolchain {
+                languageVersion = JavaLanguageVersion.of(targetJava)
+            }
+            withSourcesJar()
+        }
+
+        tasks.withType(JavaCompile).configureEach {
+            options.encoding = 'UTF-8'
+            options.release = targetJava
+        }
+    }
+}

@@ -1,0 +1,42 @@
+plugins {
+    id 'net.fabricmc.fabric-loom' version "${loom_version}"
+}
+
+version = "${project.mod_version}+mc${project.mc263_minecraft_version}"
+
+base {
+    archivesName = "${project.archives_base_name}"
+}
+
+sourceSets {
+    main {
+        java.srcDir '../fabric-shared/src/main/java'
+    }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.mc263_minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${project.mc263_loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.mc263_fabric_api_version}"
+
+    implementation project(':core')
+    include project(':core')
+
+    def flashbackJar = rootProject.file("libs/${project.mc263_flashback_jar}")
+    if (flashbackJar.exists()) {
+        compileOnly files(flashbackJar)
+    } else {
+        logger.warn("Missing ${flashbackJar}. Copy Flashback for MC ${project.mc263_minecraft_version} into libs/ before building mc-26.3.")
+    }
+}
+
+processResources {
+    inputs.property 'version', project.version
+    inputs.property 'minecraft_version', project.mc263_minecraft_version
+    filesMatching('fabric.mod.json') {
+        expand(
+            'version': project.version,
+            'minecraft_version': project.mc263_minecraft_version
+        )
+    }
+}
