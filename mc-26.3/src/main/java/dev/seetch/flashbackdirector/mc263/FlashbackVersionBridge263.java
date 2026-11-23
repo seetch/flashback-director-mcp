@@ -530,10 +530,21 @@ public final class FlashbackVersionBridge263 implements FlashbackVersionBridge {
                 }
             }
 
-            TreeMap<Integer, Keyframe> newEntries = new TreeMap<>();
+            TreeMap<Integer, Map<String, Object>> sortedInputs = new TreeMap<>();
             for (Map<String, Object> kfMap : keyframes) {
                 int tick = parseKeyframeTick(kfMap);
-                Keyframe kf = deserializeKeyframe(canonicalType, kfMap);
+                sortedInputs.put(tick, kfMap);
+            }
+
+            TreeMap<Integer, Keyframe> newEntries = new TreeMap<>();
+            Double prevCameraYaw = null;
+            for (Map.Entry<Integer, Map<String, Object>> inputEntry : sortedInputs.entrySet()) {
+                int tick = inputEntry.getKey();
+                Map<String, Object> kfMap = inputEntry.getValue();
+                Keyframe kf = deserializeKeyframe(canonicalType, kfMap, prevCameraYaw);
+                if (kf instanceof CameraKeyframe camKf) {
+                    prevCameraYaw = (double) camKf.yaw;
+                }
                 newEntries.put(tick, kf);
             }
 
@@ -1082,7 +1093,7 @@ public final class FlashbackVersionBridge263 implements FlashbackVersionBridge {
         return InterpolationType.SMOOTH;
     }
 
-    private static Keyframe deserializeKeyframe(String type, Map<String, Object> m) {
+    private static Keyframe deserializeKeyframe(String type, Map<String, Object> m, Double prevCameraYaw) {
         InterpolationType interp = parseInterpolation(m);
         return switch (type) {
             case "CAMERA" -> {
@@ -1092,7 +1103,8 @@ public final class FlashbackVersionBridge263 implements FlashbackVersionBridge {
                 if (m.get("look_at") != null) {
                     Vector3d tgt = parseVector3d(m.get("look_at"), "look_at");
                     YawPitch aim = CameraPathMath.lookAt(new Vec3(pos.x, pos.y, pos.z), new Vec3(tgt.x, tgt.y, tgt.z));
-                    yaw = (float) aim.yaw();
+                    double unwrapped = prevCameraYaw == null ? aim.yaw() : CameraPathMath.unwrapYaw(prevCameraYaw, aim.yaw());
+                    yaw = (float) unwrapped;
                     pitch = (float) aim.pitch();
                 } else {
                     yaw = asFloat(m.getOrDefault("yaw", 0.0), "yaw");

@@ -5,7 +5,7 @@
 Локальный Fabric-аддон и автономный MCP-сервер без зависимостей для **Minecraft 26.2 / 26.3** и **Flashback**.
 Позволяет ИИ-клиенту находить сильные моменты в реплее, проверять коллизии камеры с блоками, собирать редактируемые кейфреймы, проверять ракурсы скриншотами и экспортировать видео.
 
-[![Release](https://img.shields.io/badge/release-v0.1.2-2ea44f)](https://github.com/seetch/flashback-director-mcp/releases/tag/v0.1.2)
+[![Release](https://img.shields.io/badge/release-v0.1.3-2ea44f)](https://github.com/seetch/flashback-director-mcp/releases/tag/v0.1.3)
 [![Minecraft](https://img.shields.io/badge/minecraft-26.2%20%7C%2026.3-555555)](https://github.com/seetch/flashback-director-mcp/releases/latest)
 [![Java](https://img.shields.io/badge/java-25%2B-b07219)](https://adoptium.net/)
 [![Node.js](https://img.shields.io/badge/node.js-18%2B-339933)](https://nodejs.org/)
@@ -77,7 +77,7 @@
 
 Скачайте файлы под вашу версию Minecraft со страницы [Releases](https://github.com/seetch/flashback-director-mcp/releases/latest):
 
-- Положите `flashback-director-mcp-0.1.2+mc26.2.jar` (или `+mc26.3.jar`) в папку `mods` вашего профиля вместе с **Fabric API** и **Flashback**.
+- Положите `flashback-director-mcp-0.1.3+mc26.2.jar` (или `+mc26.3.jar`) в папку `mods` вашего профиля вместе с **Fabric API** и **Flashback**.
 - Сохраните `flashback-director-mcp.mjs` в постоянную папку (`npm install` не требуется).
 
 ### 2. Подключите к ИИ-клиенту

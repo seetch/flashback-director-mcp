@@ -3,9 +3,15 @@
   "id": "flashback-director-mcp",
   "version": "${version}",
   "name": "Flashback Director MCP",
-  "description": "Local MCP bridge for AI-assisted YouTuber-style cinematics in Flashback.",
+  "description": "Local MCP bridge for AI-assisted cinematics, highlight scouting, collision-checked camera paths, and Blaze3D previews in Flashback.",
   "authors": ["seetch"],
+  "contact": {
+    "homepage": "https://github.com/seetch/flashback-director-mcp",
+    "sources": "https://github.com/seetch/flashback-director-mcp",
+    "issues": "https://github.com/seetch/flashback-director-mcp/issues"
+  },
   "license": "All-Rights-Reserved",
+  "icon": "assets/flashback-director-mcp/icon.png",
   "environment": "client",
   "entrypoints": {
     "client": [

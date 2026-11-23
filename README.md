@@ -5,7 +5,7 @@
 Local Fabric addon and zero-dependency MCP server for **Minecraft 26.2 / 26.3** and **Flashback**.
 Control replays, scan highlights, validate camera collisions, build editable keyframes, inspect frames, and export video directly from your AI client.
 
-[![Release](https://img.shields.io/badge/release-v0.1.2-2ea44f)](https://github.com/seetch/flashback-director-mcp/releases/tag/v0.1.2)
+[![Release](https://img.shields.io/badge/release-v0.1.3-2ea44f)](https://github.com/seetch/flashback-director-mcp/releases/tag/v0.1.3)
 [![Minecraft](https://img.shields.io/badge/minecraft-26.2%20%7C%2026.3-555555)](https://github.com/seetch/flashback-director-mcp/releases/latest)
 [![Java](https://img.shields.io/badge/java-25%2B-b07219)](https://adoptium.net/)
 [![Node.js](https://img.shields.io/badge/node.js-18%2B-339933)](https://nodejs.org/)
@@ -77,7 +77,7 @@ Control replays, scan highlights, validate camera collisions, build editable key
 
 Download the files for your Minecraft version from [Releases](https://github.com/seetch/flashback-director-mcp/releases/latest):
 
-- Put `flashback-director-mcp-0.1.2+mc26.2.jar` (or `+mc26.3.jar`) into your Minecraft profile's `mods` folder alongside **Fabric API** and **Flashback**.
+- Put `flashback-director-mcp-0.1.3+mc26.2.jar` (or `+mc26.3.jar`) into your Minecraft profile's `mods` folder alongside **Fabric API** and **Flashback**.
 - Save `flashback-director-mcp.mjs` in a permanent local folder (no `npm install` needed).
 
 ### 2. Connect your AI client

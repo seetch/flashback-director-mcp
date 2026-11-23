@@ -12,7 +12,7 @@ import path from 'node:path';
 import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
 
-const SERVER_VERSION = '0.1.2';
+const SERVER_VERSION = '0.1.3';
 const PROTOCOL_VERSIONS = ['2024-11-05', '2025-03-26', '2025-06-18', '2025-11-25'];
 const LATEST_PROTOCOL_VERSION = PROTOCOL_VERSIONS.at(-1);
 const BRIDGE_FILE = process.env.FLASHBACK_DIRECTOR_BRIDGE_FILE
